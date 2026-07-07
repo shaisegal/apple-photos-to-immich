@@ -115,7 +115,12 @@ class ImmichClient:
                 break
 
             assets.extend(items)
-            total = assets_obj.get("total")
+            next_page = assets_obj.get("nextPage") if isinstance(assets_obj, dict) else None
+            if next_page is not None:
+                page = int(next_page)
+                continue
+
+            total = assets_obj.get("total") if isinstance(assets_obj, dict) else None
             if total is not None and page * size >= int(total):
                 break
             if len(items) < size:

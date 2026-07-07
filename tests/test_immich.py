@@ -68,6 +68,26 @@ class ImmichClientTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in items], ["1", "2", "3"])
         self.assertEqual(client.request.call_count, 2)
 
+    def test_iter_all_assets_prefers_next_page_over_total(self) -> None:
+        client = ImmichClient(
+            "https://example.com",
+            "secret",
+            page_size=2,
+            retry_backoff_seconds=0,
+            logger=logging.getLogger("test"),
+        )
+        client.request = MagicMock(
+            side_effect=[
+                {"assets": {"items": [{"id": "1"}, {"id": "2"}], "total": 2, "nextPage": 2}},
+                {"assets": {"items": [{"id": "3"}, {"id": "4"}], "total": 2, "nextPage": None}},
+            ]
+        )
+
+        items = client.iter_all_assets()
+
+        self.assertEqual([item["id"] for item in items], ["1", "2", "3", "4"])
+        self.assertEqual(client.request.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
