@@ -38,8 +38,18 @@ Recommended for end users:
 brew install immich-go
 uv tool install osxphotos
 brew tap shaisegal/tools
+brew trust shaisegal/tools
 brew install apple-photos-to-immich
 ```
+
+If Homebrew refuses to load the tap because it is untrusted, trust either the whole tap or just this Formula:
+
+```bash
+brew trust shaisegal/tools
+brew trust --formula shaisegal/tools/apple-photos-to-immich
+```
+
+Homebrew stores trusted entries in `~/.homebrew/trust.json` by default, or in `${XDG_CONFIG_HOME}/homebrew/trust.json` if `XDG_CONFIG_HOME` is set.
 
 Why Homebrew is the best default here:
 
@@ -330,6 +340,7 @@ Homebrew installation for normal usage:
 
 ```bash
 brew tap shaisegal/tools
+brew trust shaisegal/tools
 brew install apple-photos-to-immich
 ```
 
