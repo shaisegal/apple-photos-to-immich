@@ -2,7 +2,7 @@
 
 Python CLI for a robust migration from Apple Photos to Immich.
 
-This project exports Apple Photos assets once, uploads them with `immich-go`, and then rebuilds Apple albums through the Immich API. The new CLI replaces the original MVP of loose shell and Python scripts, while keeping the previous entry points as wrappers.
+This project exports Apple Photos assets once, uploads them with `immich-go`, and then rebuilds Apple albums through the Immich API.
 
 ## Why This Exists
 
@@ -18,14 +18,40 @@ This tool exists to solve that gap:
 
 It is a migration workflow, not just an uploader.
 
+## Installation
+
+Recommended for end users:
+
+```bash
+brew install immich-go
+uv tool install osxphotos
+brew tap shaisegal/tools
+brew install apple-photos-to-immich
+```
+
+Why Homebrew is the best default here:
+
+- simple one-command installation and upgrades
+- isolated Python environment managed by the Formula
+- no need to manually create or activate a project venv
+
+If you want to run the repository directly during development instead:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip setuptools wheel
+python -m pip install -e ".[dev]"
+```
+
 ## Quick Start
 
 ```bash
-./apple-photos-to-immich check
-./apple-photos-to-immich export
-./apple-photos-to-immich import-assets
-./apple-photos-to-immich apply-albums
-./apple-photos-to-immich verify
+apple-photos-to-immich check
+apple-photos-to-immich export
+apple-photos-to-immich import-assets
+apple-photos-to-immich apply-albums
+apple-photos-to-immich verify
 ```
 
 `import-assets` waits for Immich processing by default. `apply-albums` generates or refreshes `album-map.json` automatically when needed.
@@ -53,15 +79,11 @@ This project avoids both. It exports assets once, imports them once, and then re
 ## Prerequisites
 
 ```bash
-uv tool install osxphotos
 brew install immich-go
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip setuptools wheel
-python -m pip install -e ".[dev]"
+uv tool install osxphotos
 ```
 
-If you want to try the tool locally without installing it first:
+If you want to try the repository locally without installing the Homebrew package first:
 
 ```bash
 ./apple-photos-to-immich --help
@@ -77,16 +99,6 @@ System Settings
 ```
 
 If `osxphotos info` fails while copying `Photos.sqlite`, the usual reason is missing Full Disk Access or the Photos app still being open.
-
-## Publish Checklist
-
-Before publishing:
-
-- replace placeholder GitHub URLs in `pyproject.toml` and `packaging/homebrew/apple-photos-to-immich.rb`
-- create a real `LICENSE` file, for example MIT
-- review the version in `pyproject.toml`
-- create a clean release tag such as `v0.1.0`
-- update the Homebrew Formula with the real tarball URL and `sha256`
 
 ## Configuration
 
@@ -123,11 +135,11 @@ Notes:
 Direct entry points:
 
 ```bash
-./apple-photos-to-immich --help
+apple-photos-to-immich --help
 python3 -m apple_photos_to_immich --help
 ```
 
-Or through the existing wrappers:
+Alternative entry points:
 
 ```bash
 ./01_export_once.sh --test
@@ -137,7 +149,7 @@ python3 04_apply_albums_to_immich.py --dry-run
 python3 05_verify.py
 ```
 
-The wrapper scripts are kept for compatibility. The primary interface is the `apple-photos-to-immich` CLI.
+The primary interface is the `apple-photos-to-immich` CLI.
 
 Available commands:
 
@@ -173,25 +185,25 @@ Example in this project:
 
 ## Recommended Flow
 
-1. `python3 -m apple_photos_to_immich check`
-2. `python3 -m apple_photos_to_immich export --test`
-3. `python3 -m apple_photos_to_immich export`
-4. `python3 -m apple_photos_to_immich import-assets`
+1. `apple-photos-to-immich check`
+2. `apple-photos-to-immich export --test`
+3. `apple-photos-to-immich export`
+4. `apple-photos-to-immich import-assets`
 
 Before continuing with the next steps, wait until Immich has finished processing the uploaded assets. The default `import-assets` command already waits for server-side jobs unless you explicitly pass `--no-wait`.
 
 `apply-albums` generates `album-map.json` automatically if it does not exist yet, and refreshes it if it is older than the latest export data, so in the normal flow you usually do not need to call `make-map` manually.
 
-5. `python3 -m apple_photos_to_immich apply-albums --dry-run`
-6. `python3 -m apple_photos_to_immich apply-albums`
-7. `python3 -m apple_photos_to_immich verify`
+5. `apple-photos-to-immich apply-albums --dry-run`
+6. `apple-photos-to-immich apply-albums`
+7. `apple-photos-to-immich verify`
 
 Useful variants:
 
-- `python3 -m apple_photos_to_immich all --test`
-- `python3 -m apple_photos_to_immich all --dry-run`
-- `python3 -m apple_photos_to_immich all --no-resume`
-- `python3 -m apple_photos_to_immich all --reset-state`
+- `apple-photos-to-immich all --test`
+- `apple-photos-to-immich all --dry-run`
+- `apple-photos-to-immich all --no-resume`
+- `apple-photos-to-immich all --reset-state`
 
 The same calls also work through the repo-local launcher:
 
@@ -208,17 +220,17 @@ Dry runs show the real target paths and do not perform write operations.
 Export:
 
 ```bash
-./apple-photos-to-immich export --dry-run
-./apple-photos-to-immich export --update
+apple-photos-to-immich export --dry-run
+apple-photos-to-immich export --update
 ```
 
 Import:
 
 ```bash
-./apple-photos-to-immich import-assets --dry-run
-./apple-photos-to-immich import-assets
-./apple-photos-to-immich import-assets --no-wait
-./apple-photos-to-immich wait-for-immich
+apple-photos-to-immich import-assets --dry-run
+apple-photos-to-immich import-assets
+apple-photos-to-immich import-assets --no-wait
+apple-photos-to-immich wait-for-immich
 ```
 
 Example output:
@@ -230,7 +242,7 @@ INFO: DRY RUN import command: immich-go upload from-folder --server https://immi
 Album sync:
 
 ```bash
-./apple-photos-to-immich apply-albums --dry-run
+apple-photos-to-immich apply-albums --dry-run
 ```
 
 Per album, the tool logs:
@@ -262,7 +274,7 @@ Practical consequences:
 - do not start `apply-albums --dry-run` while Immich is still active or waiting
 - if only `paused` jobs remain, the tool reports Immich as idle but warns that no further progress will happen until those queues are resumed
 
-## Improvements Over the MVP
+## Design Benefits
 
 - Central Python CLI instead of scattered one-off scripts
 - TOML configuration instead of distributed shell-env configuration
@@ -302,94 +314,24 @@ Practical consequences:
 
 ## Homebrew
 
-If you want the tool to work "everywhere" directly, there are two sensible approaches:
-
-1. Repo-local launcher  
-   `./apple-photos-to-immich ...`
-2. Installation into its own Python environment  
-   `.venv/bin/apple-photos-to-immich ...`
-
-I would not ship a real Homebrew package as `brew install` on top of the system Python. Instead, use a Formula with its own Python virtualenv via `Language::Python::Virtualenv`.
-
-Practical flow for your own tap:
-
-1. Version the repository and create a release tag, for example `v0.1.0`
-2. Determine the release tarball and its `sha256`
-3. Create your own tap repository, for example `yourname/homebrew-tools`
-4. Add a Formula `apple-photos-to-immich.rb`
-5. Install it via:
+Homebrew installation for normal usage:
 
 ```bash
-brew tap yourname/tools
+brew tap shaisegal/tools
 brew install apple-photos-to-immich
 ```
 
-Formula skeleton:
+After that, the command is available globally:
 
-```ruby
-class ApplePhotosToImmich < Formula
-  include Language::Python::Virtualenv
-
-  desc "Migrate Apple Photos libraries to Immich"
-  homepage "https://github.com/yourname/apple-photos-to-immich"
-  url "https://github.com/yourname/apple-photos-to-immich/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "REPLACE_WITH_REAL_SHA256"
-  license "MIT"
-
-  depends_on "python@3.12"
-
-  resource "requests" do
-    url "https://files.pythonhosted.org/packages/source/r/requests/requests-2.34.2.tar.gz"
-    sha256 "REPLACE_WITH_REAL_SHA256"
-  end
-
-  resource "certifi" do
-    url "https://files.pythonhosted.org/packages/source/c/certifi/certifi-2026.6.17.tar.gz"
-    sha256 "REPLACE_WITH_REAL_SHA256"
-  end
-
-  resource "charset-normalizer" do
-    url "https://files.pythonhosted.org/packages/source/c/charset-normalizer/charset_normalizer-3.4.8.tar.gz"
-    sha256 "REPLACE_WITH_REAL_SHA256"
-  end
-
-  resource "idna" do
-    url "https://files.pythonhosted.org/packages/source/i/idna/idna-3.18.tar.gz"
-    sha256 "REPLACE_WITH_REAL_SHA256"
-  end
-
-  resource "urllib3" do
-    url "https://files.pythonhosted.org/packages/source/u/urllib3/urllib3-2.7.0.tar.gz"
-    sha256 "REPLACE_WITH_REAL_SHA256"
-  end
-
-  def install
-    virtualenv_install_with_resources
-    bin.install_symlink libexec/"bin/apple-photos-to-immich"
-  end
-
-  test do
-    assert_match "apple-photos-to-immich", shell_output("#{bin}/apple-photos-to-immich --help")
-  end
-end
+```bash
+apple-photos-to-immich --help
 ```
 
-A repo-local starter version of that Formula is included at:
+Use the repo-local launcher only if you are working from this repository checkout:
 
-`packaging/homebrew/apple-photos-to-immich.rb`
-
-Recommended publication layout:
-
-1. Main source repository: `apple-photos-to-immich`
-2. Homebrew tap repository: `homebrew-tools`
-3. Formula path inside the tap: `Formula/apple-photos-to-immich.rb`
-
-For this project, that approach makes sense if:
-
-- `config.toml` remains the only config format
-- releases are tagged cleanly
-- Python dependencies remain stable
-- you actually want to distribute the tool outside this repository
+```bash
+./apple-photos-to-immich --help
+```
 
 ## Known Limitations
 
