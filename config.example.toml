@@ -1,0 +1,28 @@
+[immich]
+server = "https://immich.home.arpa"
+api_key = "PASTE_API_KEY_HERE"
+skip_verify_ssl = false
+
+[photos]
+library = "/Users/fabian/Pictures/Photos Library.photoslibrary"
+album_prefix = "Apple Photos"
+
+[paths]
+export_dir = "/Users/fabian/Immich-Migration/export"
+meta_dir = "/Users/fabian/Immich-Migration/meta"
+
+[logging]
+dir = "/Users/fabian/Immich-Migration/meta/logs"
+
+[runtime]
+page_size = 250
+retry_attempts = 5
+retry_backoff_seconds = 1.0
+album_chunk_size = 500
+import_session_tag = "apple-photos-to-immich"
+import_manage_heic_jpeg = "StackCoverHeic"
+import_manage_raw_jpeg = "StackCoverRaw"
+test_export_limit = 30
+osxphotos_binary = "osxphotos"
+osxphotos_python = ""
+immich_go_binary = "immich-go"

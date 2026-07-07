@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "apple-photos-to-immich"
+version = "0.1.0"
+description = "CLI for migrating an Apple Photos library to Immich"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  { name = "Fabian" },
+]
+dependencies = [
+  "requests>=2.31.0",
+]
+keywords = ["apple-photos", "immich", "migration", "photos", "cli"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: System :: Archiving",
+]
+
+[project.optional-dependencies]
+dev = [
+  "requests>=2.31.0",
+]
+
+[project.scripts]
+apple-photos-to-immich = "apple_photos_to_immich.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/yourname/apple-photos-to-immich"
+Repository = "https://github.com/yourname/apple-photos-to-immich"
+Issues = "https://github.com/yourname/apple-photos-to-immich/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

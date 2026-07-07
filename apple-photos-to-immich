@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
+
+if [[ -x "$PWD/.venv/bin/python" ]]; then
+  exec "$PWD/.venv/bin/python" -m apple_photos_to_immich "$@"
+fi
+
+exec python3 -m apple_photos_to_immich "$@"
