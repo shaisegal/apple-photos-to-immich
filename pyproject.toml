@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "apple-photos-to-immich"
-version = "0.1.0"
+version = "0.1.1"
 description = "CLI for migrating an Apple Photos library to Immich"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,7 +20,6 @@ classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: End Users/Desktop",
-  "License :: OSI Approved :: MIT License",
   "Operating System :: MacOS",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
