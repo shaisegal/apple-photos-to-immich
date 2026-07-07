@@ -38,9 +38,9 @@ dev = [
 apple-photos-to-immich = "apple_photos_to_immich.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/yourname/apple-photos-to-immich"
-Repository = "https://github.com/yourname/apple-photos-to-immich"
-Issues = "https://github.com/yourname/apple-photos-to-immich/issues"
+Homepage = "https://github.com/shaisegal/apple-photos-to-immich"
+Repository = "https://github.com/shaisegal/apple-photos-to-immich"
+Issues = "https://github.com/shaisegal/apple-photos-to-immich/issues"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
