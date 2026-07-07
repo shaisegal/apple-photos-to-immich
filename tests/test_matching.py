@@ -66,6 +66,32 @@ class MatchingTests(unittest.TestCase):
 
         self.assertEqual(result.duplicate_uuids, {"AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA": 2})
 
+    def test_match_assets_marks_ambiguous_fallback_as_missing(self) -> None:
+        apple_assets = {
+            "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC": {
+                "originalFilename": "IMG_9999.JPG",
+                "date": "2024-03-01 08:09:10",
+            }
+        }
+        immich_assets = [
+            {
+                "id": "asset-1",
+                "originalFileName": "IMG_9999.JPG",
+                "fileCreatedAt": "2024-03-01T08:09:10Z",
+            },
+            {
+                "id": "asset-2",
+                "originalFileName": "IMG_9999.JPG",
+                "fileCreatedAt": "2024-03-01T08:09:10Z",
+            },
+        ]
+
+        result = match_assets(apple_assets, immich_assets)
+
+        self.assertEqual(result.uuid_to_asset_id, {})
+        self.assertEqual(result.matched_by, {})
+        self.assertEqual(result.missing_uuids, ["CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC"])
+
 
 if __name__ == "__main__":
     unittest.main()
