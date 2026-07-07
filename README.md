@@ -4,6 +4,18 @@ Python CLI for a robust migration from Apple Photos to Immich.
 
 This project exports Apple Photos assets once, uploads them with `immich-go`, and then rebuilds Apple albums through the Immich API.
 
+Important before you start:
+
+- this tool is intended for a local Apple Photos library on your Mac
+- if your library uses iCloud Photos, make sure the Mac has the full original files locally before you export
+- in Photos on Mac, check the iCloud settings and prefer `Download Originals to this Mac` instead of `Optimize Mac Storage`
+- otherwise the export may only see device-optimized or not-yet-downloaded items, which can lead to missing assets or reduced-quality files in the migration
+
+Apple references:
+
+- Photos User Guide for Mac: <https://support.apple.com/guide/photos/welcome/mac>
+- Apple Support search for the Photos iCloud setting: <https://support.apple.com/search?query=Download%20Originals%20to%20this%20Mac>
+
 ## Why This Exists
 
 The hardest part of an Apple Photos to Immich migration is usually not getting files into Immich. The real problem is preserving album structure without duplicating files or rebuilding everything by hand afterwards.
