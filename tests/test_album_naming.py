@@ -40,8 +40,45 @@ class RenameClient:
     def add_assets_to_album(self, album_id: str, asset_ids: list[str]) -> None:
         return None
 
+    def delete_album(self, album_id: str) -> None:
+        raise AssertionError("delete_album should not be called when a legacy album can be renamed")
+
     def create_album(self, title: str) -> dict[str, str]:
         raise AssertionError("create_album should not be called when a legacy album can be renamed")
+
+
+class MergeClient:
+    def __init__(self) -> None:
+        self.deleted: list[str] = []
+        self.added: list[tuple[str, list[str]]] = []
+
+    def iter_all_assets(self) -> list[dict[str, str]]:
+        return []
+
+    def get_albums(self) -> list[dict[str, str]]:
+        return [
+            {"albumName": "Trip", "id": "album-new"},
+            {"albumName": "Apple Photos/Albums/Trip", "id": "album-legacy"},
+        ]
+
+    def get_album_assets(self, album_id: str) -> dict[str, list[dict[str, str]]]:
+        if album_id == "album-new":
+            return {"assets": [{"id": "asset-1"}]}
+        if album_id == "album-legacy":
+            return {"assets": [{"id": "asset-legacy-only"}]}
+        raise AssertionError(f"Unexpected album id: {album_id}")
+
+    def add_assets_to_album(self, album_id: str, asset_ids: list[str]) -> None:
+        self.added.append((album_id, asset_ids))
+
+    def delete_album(self, album_id: str) -> None:
+        self.deleted.append(album_id)
+
+    def create_album(self, title: str) -> dict[str, str]:
+        raise AssertionError("create_album should not be called when the destination album already exists")
+
+    def update_album(self, album_id: str, title: str) -> dict[str, str]:
+        raise AssertionError("update_album should not be called when the destination album already exists")
 
 
 class VerifyClient:
@@ -128,6 +165,59 @@ class AlbumNamingTests(unittest.TestCase):
 
             self.assertEqual(exit_code, 0)
             self.assertEqual(client.renames, [("album-1", "Trip")])
+
+    def test_apply_albums_merges_legacy_album_into_existing_target(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            meta_dir = root / "meta"
+            meta_dir.mkdir(parents=True)
+            album_map = {
+                "assetCount": 1,
+                "albumCount": 1,
+                "albums": {
+                    "Trip": {
+                        "title": "Trip",
+                        "assetUuids": ["AAAABBBB-1111-2222-3333-444455556666"],
+                    }
+                },
+                "assets": {
+                    "AAAABBBB-1111-2222-3333-444455556666": {
+                        "originalFilename": "IMG_1.JPG",
+                        "date": "2024-01-02 10:00:00",
+                    }
+                },
+            }
+            (meta_dir / "album-map.json").write_text(json.dumps(album_map), encoding="utf-8")
+            config = Config(
+                immich_server="https://example.com",
+                immich_api_key="secret",
+                photos_library="/tmp/library.photoslibrary",
+                export_dir=root / "export",
+                meta_dir=meta_dir,
+                album_prefix="Apple Photos",
+                system_album_prefix="Apple Photos",
+            )
+
+            import apple_photos_to_immich.commands as commands
+
+            client = MergeClient()
+            originals = {
+                "_make_client": commands._make_client,
+                "build_match_report": commands.build_match_report,
+            }
+            commands._make_client = lambda config, logger: client
+            commands.build_match_report = lambda config, client, logger: {
+                "uuidToAssetId": {"AAAABBBB-1111-2222-3333-444455556666": "asset-1"}
+            }
+            try:
+                exit_code = apply_albums(config, LoggerStub(), dry_run=False)
+            finally:
+                for name, original in originals.items():
+                    setattr(commands, name, original)
+
+            self.assertEqual(exit_code, 0)
+            self.assertEqual(client.added, [("album-new", ["asset-legacy-only"])])
+            self.assertEqual(client.deleted, ["album-legacy"])
 
     def test_verify_accepts_legacy_and_new_album_names(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

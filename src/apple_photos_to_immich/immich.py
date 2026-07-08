@@ -110,6 +110,9 @@ class ImmichClient:
     def update_album(self, album_id: str, title: str) -> dict[str, Any]:
         return self.request("PATCH", f"/albums/{album_id}", json={"albumName": title})
 
+    def delete_album(self, album_id: str) -> Any:
+        return self.request("DELETE", f"/albums/{album_id}")
+
     def get_album_assets(self, album_id: str) -> list[dict[str, Any]]:
         return self.request("GET", f"/albums/{album_id}")
 

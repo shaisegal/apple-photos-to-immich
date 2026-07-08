@@ -321,6 +321,7 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
     existing_albums = {album["albumName"]: album["id"] for album in client.get_albums()}
     created = 0
     renamed = 0
+    merged = 0
     touched = 0
     missing_assets_total = 0
 
@@ -333,8 +334,25 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
             logger.warning("Skipping unmatched album %s", title)
             continue
 
+        legacy_album_id: str | None = None
+        legacy_album_title: str | None = None
         if title in existing_albums:
             album_id = existing_albums[title]
+            legacy_titles = _legacy_album_titles(title, config)
+            legacy_matches = [legacy for legacy in legacy_titles if legacy in existing_albums and legacy != title]
+            if len(legacy_matches) == 1:
+                legacy_album_title = legacy_matches[0]
+                legacy_album_id = existing_albums[legacy_album_title]
+                if dry_run:
+                    logger.info(
+                        "DRY RUN would merge legacy album %s into %s and delete the legacy album",
+                        legacy_album_title,
+                        title,
+                    )
+                merged += 1
+            elif len(legacy_matches) > 1:
+                logger.warning("Multiple legacy album names match %s: %s", title, ", ".join(legacy_matches))
+                continue
         else:
             legacy_titles = _legacy_album_titles(title, config)
             legacy_matches = [legacy for legacy in legacy_titles if legacy in existing_albums and legacy != title]
@@ -362,11 +380,18 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
                 created += 1
 
         existing_asset_ids = set()
+        legacy_asset_ids = set()
         if not dry_run:
             album_payload = client.get_album_assets(album_id)
             existing_asset_ids = {asset["id"] for asset in album_payload.get("assets", [])}
+            if legacy_album_id is not None:
+                legacy_payload = client.get_album_assets(legacy_album_id)
+                legacy_asset_ids = {asset["id"] for asset in legacy_payload.get("assets", [])}
 
         pending = [asset_id for asset_id in asset_ids if asset_id not in existing_asset_ids]
+        for legacy_asset_id in sorted(legacy_asset_ids):
+            if legacy_asset_id not in existing_asset_ids and legacy_asset_id not in pending:
+                pending.append(legacy_asset_id)
         if dry_run:
             logger.info(
                 "DRY RUN album %s: total=%s add=%s already_present=%s missing=%s",
@@ -384,6 +409,10 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
             if chunk:
                 client.add_assets_to_album(album_id, chunk)
                 time.sleep(sleep_seconds)
+        if legacy_album_id is not None:
+            client.delete_album(legacy_album_id)
+            if legacy_album_title is not None:
+                existing_albums.pop(legacy_album_title, None)
 
         logger.info(
             "Album %s synced: total=%s added=%s already_present=%s missing=%s",
@@ -396,9 +425,10 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
         touched += 1
 
     logger.info(
-        "Album apply finished. Created=%s, renamed=%s, touched=%s, missing asset references=%s",
+        "Album apply finished. Created=%s, renamed=%s, merged=%s, touched=%s, missing asset references=%s",
         created,
         renamed,
+        merged,
         touched,
         missing_assets_total,
     )
