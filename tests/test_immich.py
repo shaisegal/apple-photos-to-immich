@@ -88,6 +88,30 @@ class ImmichClientTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in items], ["1", "2", "3", "4"])
         self.assertEqual(client.request.call_count, 2)
 
+    def test_request_logs_insecure_ssl_once(self) -> None:
+        logger = MagicMock()
+        client = ImmichClient(
+            "https://example.com",
+            "secret",
+            verify_ssl=False,
+            retry_backoff_seconds=0,
+            logger=logger,
+        )
+        client.session.request = MagicMock(
+            side_effect=[
+                make_response(200, {"ok": True}),
+                make_response(200, {"ok": True}),
+            ]
+        )
+
+        client.request("GET", "/albums")
+        client.request("GET", "/jobs")
+
+        logger.warning.assert_called_once_with(
+            "SSL certificate verification is disabled for Immich requests to %s.",
+            "https://example.com/api",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

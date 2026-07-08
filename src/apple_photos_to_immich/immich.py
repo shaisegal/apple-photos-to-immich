@@ -9,6 +9,11 @@ try:
 except ImportError:  # pragma: no cover - exercised in dependency-light environments
     requests = None
 
+try:
+    from urllib3.exceptions import InsecureRequestWarning
+except ImportError:  # pragma: no cover - dependency-light environments
+    InsecureRequestWarning = None
+
 
 class ImmichClient:
     def __init__(
@@ -40,6 +45,9 @@ class ImmichClient:
                 "Content-Type": "application/json",
             }
         )
+        self._warned_insecure_ssl = False
+        if not self.verify_ssl and InsecureRequestWarning is not None:
+            requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
     def request(self, method: str, path: str, **kwargs: Any) -> Any:
         url = self.base + path
@@ -47,6 +55,12 @@ class ImmichClient:
 
         for attempt in range(1, self.retry_attempts + 1):
             try:
+                if not self.verify_ssl and not self._warned_insecure_ssl:
+                    self.logger.warning(
+                        "SSL certificate verification is disabled for Immich requests to %s.",
+                        self.base,
+                    )
+                    self._warned_insecure_ssl = True
                 response = self.session.request(
                     method,
                     url,
@@ -92,6 +106,9 @@ class ImmichClient:
 
     def create_album(self, title: str) -> dict[str, Any]:
         return self.request("POST", "/albums", json={"albumName": title})
+
+    def update_album(self, album_id: str, title: str) -> dict[str, Any]:
+        return self.request("PATCH", f"/albums/{album_id}", json={"albumName": title})
 
     def get_album_assets(self, album_id: str) -> list[dict[str, Any]]:
         return self.request("GET", f"/albums/{album_id}")

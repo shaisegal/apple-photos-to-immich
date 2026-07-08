@@ -143,6 +143,7 @@ Important fields:
 - `[immich].skip_verify_ssl`
 - `[photos].library`
 - `[photos].album_prefix`
+- `[photos].system_album_prefix`
 - `[paths].export_dir`
 - `[paths].meta_dir`
 - `[runtime].osxphotos_python`
@@ -151,6 +152,9 @@ Notes:
 
 - If `osxphotos` is only installed via `uv tool install osxphotos`, `make-map` can automatically use the Python interpreter from that tool environment.
 - If auto-detection does not work, set `runtime.osxphotos_python`, for example `/Users/USERNAME/.local/share/uv/tools/osxphotos/bin/python`.
+- Regular Apple albums are recreated with their plain album names.
+- System albums are recreated as `<system_album_prefix>: <name>`, for example `Apple Photos: Videos`.
+- `photos.album_prefix` is kept as a legacy compatibility setting so existing `Apple Photos/Albums/...` and `Apple Photos/System/...` names can be recognized and renamed automatically during `apply-albums`.
 
 ## CLI
 
@@ -360,5 +364,6 @@ Use the repo-local launcher only if you are working from this repository checkou
 
 - Apple People/Faces are not transferred 1:1 into Immich.
 - Smart Albums can only be recreated as static virtual albums.
+- Classic Shared Albums are currently not recreated reliably and may be skipped. `osxphotos` can detect shared-album assets and shared-album metadata, but its own documentation notes that Photos does not always keep shared-album originals downloaded locally on the Mac, which makes export and downstream matching less reliable.
 - Uploading still runs through `immich-go`; part of the resume semantics depends on its behavior.
 - API-based steps still require `requests`.

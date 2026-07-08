@@ -7,10 +7,11 @@ from typing import Any
 
 import osxphotos
 
+from .album_names import build_album_title, build_system_album_title
 from .apple_photos import as_list, get_bool
 
 
-def build_album_map(library: str, album_prefix: str) -> dict[str, Any]:
+def build_album_map(library: str, album_prefix: str, system_album_prefix: str) -> dict[str, Any]:
     photosdb = osxphotos.PhotosDB(dbfile=library) if library else osxphotos.PhotosDB()
     photos = photosdb.photos()
 
@@ -21,8 +22,7 @@ def build_album_map(library: str, album_prefix: str) -> dict[str, Any]:
         album_name = album_name.strip("/")
         if not album_name:
             return
-        full_name = f"{album_prefix}/{album_name}" if album_prefix else album_name
-        item = album_map.setdefault(full_name, {"title": full_name, "assetUuids": []})
+        item = album_map.setdefault(album_name, {"title": album_name, "assetUuids": []})
         uuid = str(getattr(photo, "uuid", "")).upper()
         if uuid and uuid not in item["assetUuids"]:
             item["assetUuids"].append(uuid)
@@ -52,28 +52,28 @@ def build_album_map(library: str, album_prefix: str) -> dict[str, Any]:
 
         for album in folder_albums:
             if album and album != "_":
-                add(f"Albums/{album}", photo)
+                add(build_album_title(album), photo)
 
         if bool(getattr(photo, "favorite", False)):
-            add("System/Favorites", photo)
+            add(build_system_album_title("Favorites", system_album_prefix), photo)
         if get_bool(photo, "ismovie", "is_movie"):
-            add("System/Videos", photo)
+            add(build_system_album_title("Videos", system_album_prefix), photo)
         if get_bool(photo, "live_photo", "is_live_photo", "live"):
-            add("System/Live Photos", photo)
+            add(build_system_album_title("Live Photos", system_album_prefix), photo)
         if get_bool(photo, "screenshot", "is_screenshot"):
-            add("System/Screenshots", photo)
+            add(build_system_album_title("Screenshots", system_album_prefix), photo)
         if get_bool(photo, "selfie", "is_selfie"):
-            add("System/Selfies", photo)
+            add(build_system_album_title("Selfies", system_album_prefix), photo)
         if get_bool(photo, "panorama", "is_panorama"):
-            add("System/Panoramas", photo)
+            add(build_system_album_title("Panoramas", system_album_prefix), photo)
         if get_bool(photo, "portrait", "is_portrait"):
-            add("System/Portrait", photo)
+            add(build_system_album_title("Portrait", system_album_prefix), photo)
         if get_bool(photo, "slow_mo", "slowmo", "is_slow_mo"):
-            add("System/Slow Motion", photo)
+            add(build_system_album_title("Slow Motion", system_album_prefix), photo)
         if get_bool(photo, "time_lapse", "timelapse", "is_time_lapse"):
-            add("System/Time Lapse", photo)
+            add(build_system_album_title("Time Lapse", system_album_prefix), photo)
         if get_bool(photo, "hidden", "is_hidden"):
-            add("System/Hidden", photo)
+            add(build_system_album_title("Hidden", system_album_prefix), photo)
 
     album_map = {
         key: {"title": value["title"], "assetUuids": sorted(value["assetUuids"])}
@@ -84,6 +84,7 @@ def build_album_map(library: str, album_prefix: str) -> dict[str, Any]:
     return {
         "source": "Apple Photos via osxphotos",
         "albumPrefix": album_prefix,
+        "systemAlbumPrefix": system_album_prefix,
         "assetCount": len(asset_index),
         "albumCount": len(album_map),
         "albums": album_map,
@@ -95,10 +96,11 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--library", required=True)
     parser.add_argument("--album-prefix", required=True)
+    parser.add_argument("--system-album-prefix", required=True)
     parser.add_argument("--output", required=True)
     args = parser.parse_args()
 
-    result = build_album_map(args.library, args.album_prefix)
+    result = build_album_map(args.library, args.album_prefix, args.system_album_prefix)
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

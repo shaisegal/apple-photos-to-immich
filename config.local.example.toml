@@ -6,6 +6,7 @@ skip_verify_ssl = false
 [photos]
 library = "/ABSOLUTE/PATH/TO/Photos Library.photoslibrary"
 album_prefix = "Apple Photos"
+system_album_prefix = "Apple Photos"
 
 [paths]
 export_dir = "./.local/export"

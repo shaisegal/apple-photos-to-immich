@@ -23,7 +23,8 @@ class Config:
     photos_library: str
     export_dir: Path
     meta_dir: Path
-    album_prefix: str
+    album_prefix: str = ""
+    system_album_prefix: str = ""
     skip_verify_ssl: bool = False
     log_dir: Path | None = None
     page_size: int = 250
@@ -40,6 +41,7 @@ class Config:
 
     def __post_init__(self) -> None:
         self.album_prefix = self.album_prefix.strip("/")
+        self.system_album_prefix = self.system_album_prefix.strip("/")
         self.log_dir = self.log_dir or (self.meta_dir / DEFAULT_LOG_DIRNAME)
 
     @property
@@ -100,7 +102,8 @@ def load_config(path: Path) -> Config:
         photos_library=str(_resolve_path(path, _require_str(photos, "library"))),
         export_dir=_resolve_path(path, _require_str(paths, "export_dir")),
         meta_dir=_resolve_path(path, _require_str(paths, "meta_dir")),
-        album_prefix=_require_str(photos, "album_prefix"),
+        album_prefix=_optional_str(photos.get("album_prefix", "")),
+        system_album_prefix=_optional_str(photos.get("system_album_prefix", photos.get("album_prefix", ""))),
         skip_verify_ssl=_coerce_bool(immich.get("skip_verify_ssl", False)),
         log_dir=_resolve_optional_path(path, logging.get("dir")),
         page_size=int(runtime.get("page_size", 250)),
@@ -138,6 +141,14 @@ def _coerce_bool(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "on"}
     return bool(value)
+
+
+def _optional_str(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
 
 
 def _resolve_path(config_path: Path, value: str) -> Path:

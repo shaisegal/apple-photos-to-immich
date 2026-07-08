@@ -8,6 +8,12 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .album_names import (
+    build_album_title,
+    build_system_album_title,
+    legacy_system_album_title,
+    legacy_user_album_title,
+)
 from .apple_photos import as_list, get_bool
 from .config import Config
 from .matching import match_assets
@@ -197,8 +203,7 @@ def make_album_map(config: Config, logger: logging.Logger) -> int:
         album_name = album_name.strip("/")
         if not album_name:
             return
-        full_name = f"{config.album_prefix}/{album_name}" if config.album_prefix else album_name
-        item = album_map.setdefault(full_name, {"title": full_name, "assetUuids": []})
+        item = album_map.setdefault(album_name, {"title": album_name, "assetUuids": []})
         uuid = str(getattr(photo, "uuid", "")).upper()
         if uuid and uuid not in item["assetUuids"]:
             item["assetUuids"].append(uuid)
@@ -228,28 +233,28 @@ def make_album_map(config: Config, logger: logging.Logger) -> int:
 
         for album in folder_albums:
             if album and album != "_":
-                add(f"Albums/{album}", photo)
+                add(build_album_title(album), photo)
 
         if bool(getattr(photo, "favorite", False)):
-            add("System/Favorites", photo)
+            add(build_system_album_title("Favorites", config.system_album_prefix), photo)
         if get_bool(photo, "ismovie", "is_movie"):
-            add("System/Videos", photo)
+            add(build_system_album_title("Videos", config.system_album_prefix), photo)
         if get_bool(photo, "live_photo", "is_live_photo", "live"):
-            add("System/Live Photos", photo)
+            add(build_system_album_title("Live Photos", config.system_album_prefix), photo)
         if get_bool(photo, "screenshot", "is_screenshot"):
-            add("System/Screenshots", photo)
+            add(build_system_album_title("Screenshots", config.system_album_prefix), photo)
         if get_bool(photo, "selfie", "is_selfie"):
-            add("System/Selfies", photo)
+            add(build_system_album_title("Selfies", config.system_album_prefix), photo)
         if get_bool(photo, "panorama", "is_panorama"):
-            add("System/Panoramas", photo)
+            add(build_system_album_title("Panoramas", config.system_album_prefix), photo)
         if get_bool(photo, "portrait", "is_portrait"):
-            add("System/Portrait", photo)
+            add(build_system_album_title("Portrait", config.system_album_prefix), photo)
         if get_bool(photo, "slow_mo", "slowmo", "is_slow_mo"):
-            add("System/Slow Motion", photo)
+            add(build_system_album_title("Slow Motion", config.system_album_prefix), photo)
         if get_bool(photo, "time_lapse", "timelapse", "is_time_lapse"):
-            add("System/Time Lapse", photo)
+            add(build_system_album_title("Time Lapse", config.system_album_prefix), photo)
         if get_bool(photo, "hidden", "is_hidden"):
-            add("System/Hidden", photo)
+            add(build_system_album_title("Hidden", config.system_album_prefix), photo)
 
     album_map = {
         key: {"title": value["title"], "assetUuids": sorted(value["assetUuids"])}
@@ -260,6 +265,7 @@ def make_album_map(config: Config, logger: logging.Logger) -> int:
     out = {
         "source": "Apple Photos via osxphotos",
         "albumPrefix": config.album_prefix,
+        "systemAlbumPrefix": config.system_album_prefix,
         "assetCount": len(asset_index),
         "albumCount": len(album_map),
         "albums": album_map,
@@ -314,6 +320,7 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
 
     existing_albums = {album["albumName"]: album["id"] for album in client.get_albums()}
     created = 0
+    renamed = 0
     touched = 0
     missing_assets_total = 0
 
@@ -329,14 +336,30 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
         if title in existing_albums:
             album_id = existing_albums[title]
         else:
-            if dry_run:
-                logger.info("DRY RUN would create album %s with %s assets", title, len(asset_ids))
-                touched += 1
+            legacy_titles = _legacy_album_titles(title, config)
+            legacy_matches = [legacy for legacy in legacy_titles if legacy in existing_albums and legacy != title]
+            if len(legacy_matches) == 1:
+                legacy_title = legacy_matches[0]
+                album_id = existing_albums[legacy_title]
+                if dry_run:
+                    logger.info("DRY RUN would rename album %s -> %s", legacy_title, title)
+                else:
+                    client.update_album(album_id, title)
+                existing_albums.pop(legacy_title, None)
+                existing_albums[title] = album_id
+                renamed += 1
+            elif len(legacy_matches) > 1:
+                logger.warning("Multiple legacy album names match %s: %s", title, ", ".join(legacy_matches))
                 continue
-            new_album = client.create_album(title)
-            album_id = new_album["id"]
-            existing_albums[title] = album_id
-            created += 1
+            else:
+                if dry_run:
+                    logger.info("DRY RUN would create album %s with %s assets", title, len(asset_ids))
+                    touched += 1
+                    continue
+                new_album = client.create_album(title)
+                album_id = new_album["id"]
+                existing_albums[title] = album_id
+                created += 1
 
         existing_asset_ids = set()
         if not dry_run:
@@ -373,8 +396,9 @@ def apply_albums(config: Config, logger: logging.Logger, *, dry_run: bool = Fals
         touched += 1
 
     logger.info(
-        "Album apply finished. Created=%s, touched=%s, missing asset references=%s",
+        "Album apply finished. Created=%s, renamed=%s, touched=%s, missing asset references=%s",
         created,
+        renamed,
         touched,
         missing_assets_total,
     )
@@ -401,6 +425,11 @@ def verify(config: Config, logger: logging.Logger) -> int:
         }
         unmatched_uuids = [uuid for uuid in expected_uuids if uuid not in report["uuidToAssetId"]]
         album_id = existing_albums.get(title)
+        if not album_id:
+            for legacy_title in _legacy_album_titles(title, config):
+                album_id = existing_albums.get(legacy_title)
+                if album_id:
+                    break
         actual_asset_ids: set[str] = set()
         extra_asset_ids: list[str] = []
         missing_asset_ids: list[str] = []
@@ -631,6 +660,8 @@ def _run_osxphotos_helper(config: Config, logger: logging.Logger) -> int:
         config.photos_library,
         "--album-prefix",
         config.album_prefix,
+        "--system-album-prefix",
+        config.system_album_prefix,
         "--output",
         str(config.album_map_path),
     ]
@@ -650,3 +681,16 @@ def _detect_osxphotos_python(config: Config) -> str | None:
     if candidate.exists():
         return str(candidate)
     return None
+
+
+def _legacy_album_titles(title: str, config: Config) -> list[str]:
+    legacy_titles = [title]
+    system_prefix = f"{config.system_album_prefix}: " if config.system_album_prefix else ""
+    if system_prefix and title.startswith(system_prefix):
+        system_name = title[len(system_prefix) :].strip()
+        legacy_titles.append(legacy_system_album_title(system_name, config.album_prefix))
+        legacy_titles.append(legacy_system_album_title(system_name, ""))
+    else:
+        legacy_titles.append(legacy_user_album_title(title, config.album_prefix))
+        legacy_titles.append(legacy_user_album_title(title, ""))
+    return list(dict.fromkeys(legacy_titles))
