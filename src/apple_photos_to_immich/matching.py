@@ -10,6 +10,9 @@ from typing import Any
 UUID_RE = re.compile(
     r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
 )
+EXPORT_NAME_RE = re.compile(
+    r"^\d{8}-\d{6}_[0-9A-Fa-f-]{36}_(.+)$"
+)
 
 
 def extract_uuid(filename: str) -> str | None:
@@ -19,6 +22,12 @@ def extract_uuid(filename: str) -> str | None:
 
 def normalize_filename(filename: str | None) -> str:
     return (filename or "").strip().lower()
+
+
+def normalize_source_filename(filename: str | None) -> str:
+    normalized = normalize_filename(filename)
+    match = EXPORT_NAME_RE.match(normalized)
+    return match.group(1) if match else normalized
 
 
 def normalize_created_at(value: str | None) -> str:
@@ -57,7 +66,7 @@ def match_assets(apple_assets: dict[str, dict[str, Any]], immich_assets: list[di
         if uuid:
             uuid_candidates.setdefault(uuid, []).append(asset_id)
 
-        fallback_key = (normalize_filename(original_name), normalize_created_at(created_at))
+        fallback_key = (normalize_source_filename(original_name), normalize_created_at(created_at))
         if fallback_key[0]:
             fallback_candidates.setdefault(fallback_key, []).append(asset_id)
 
@@ -80,7 +89,7 @@ def match_assets(apple_assets: dict[str, dict[str, Any]], immich_assets: list[di
             continue
 
         fallback_key = (
-            normalize_filename(str(payload.get("originalFilename", ""))),
+            normalize_source_filename(str(payload.get("originalFilename", ""))),
             normalize_created_at(str(payload.get("date", ""))),
         )
         candidate_ids = fallback_candidates.get(fallback_key, [])

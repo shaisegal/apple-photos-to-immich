@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import unittest
 
-from apple_photos_to_immich.matching import extract_uuid, match_assets
+from apple_photos_to_immich.matching import extract_uuid, match_assets, normalize_source_filename
 
 
 class MatchingTests(unittest.TestCase):
     def test_extract_uuid(self) -> None:
         value = extract_uuid("20240101-120000_12345678-1234-1234-1234-1234567890ab_IMG_0001.JPG")
         self.assertEqual(value, "12345678-1234-1234-1234-1234567890AB")
+
+    def test_normalize_source_filename_strips_export_prefix(self) -> None:
+        value = normalize_source_filename(
+            "20250819-132723_8E0FC9E1-EEEB-4E19-980A-C309CC06D7B7_IMG_0492.HEIC"
+        )
+        self.assertEqual(value, "img_0492.heic")
 
     def test_match_assets_prefers_uuid_then_filename_date(self) -> None:
         apple_assets = {
@@ -91,6 +97,32 @@ class MatchingTests(unittest.TestCase):
         self.assertEqual(result.uuid_to_asset_id, {})
         self.assertEqual(result.matched_by, {})
         self.assertEqual(result.missing_uuids, ["CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC"])
+
+    def test_match_assets_fallback_matches_exported_name_with_replacement_uuid(self) -> None:
+        apple_assets = {
+            "0212F6E6-D94C-4209-84B1-5B43ECE42706": {
+                "originalFilename": "IMG_0492.HEIC",
+                "date": "2025-08-19 11:27:23+00:00",
+            }
+        }
+        immich_assets = [
+            {
+                "id": "replacement-match",
+                "originalFileName": "20250819-132723_8E0FC9E1-EEEB-4E19-980A-C309CC06D7B7_IMG_0492.HEIC",
+                "fileCreatedAt": "2025-08-19T11:27:23.273Z",
+            }
+        ]
+
+        result = match_assets(apple_assets, immich_assets)
+
+        self.assertEqual(
+            result.uuid_to_asset_id["0212F6E6-D94C-4209-84B1-5B43ECE42706"],
+            "replacement-match",
+        )
+        self.assertEqual(
+            result.matched_by["0212F6E6-D94C-4209-84B1-5B43ECE42706"],
+            "filename_date",
+        )
 
 
 if __name__ == "__main__":

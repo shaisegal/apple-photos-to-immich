@@ -364,6 +364,6 @@ Use the repo-local launcher only if you are working from this repository checkou
 
 - Apple People/Faces are not transferred 1:1 into Immich.
 - Smart Albums can only be recreated as static virtual albums.
-- Classic Shared Albums are currently not recreated reliably and may be skipped. `osxphotos` can detect shared-album assets and shared-album metadata, but its own documentation notes that Photos does not always keep shared-album originals downloaded locally on the Mac, which makes export and downstream matching less reliable.
+- Classic Shared Albums are only partially recoverable. Album names can now be rebuilt more reliably, but assets from other people in a shared album may still be missing because Apple Photos often shows them without keeping exportable local originals in the library.
 - Uploading still runs through `immich-go`; part of the resume semantics depends on its behavior.
 - API-based steps still require `requests`.
