@@ -8,7 +8,7 @@ from typing import Any
 import osxphotos
 
 from .album_names import build_album_title, build_system_album_title
-from .apple_photos import as_list, get_bool
+from .apple_photos import get_album_names, get_bool
 
 
 def build_album_map(library: str, album_prefix: str, system_album_prefix: str) -> dict[str, Any]:
@@ -46,13 +46,8 @@ def build_album_map(library: str, album_prefix: str, system_album_prefix: str) -
             "favorite": bool(getattr(photo, "favorite", False)),
         }
 
-        folder_albums = as_list(getattr(photo, "folder_album", None))
-        if not folder_albums:
-            folder_albums = as_list(getattr(photo, "albums", None))
-
-        for album in folder_albums:
-            if album and album != "_":
-                add(build_album_title(album), photo)
+        for album in get_album_names(photo):
+            add(build_album_title(album), photo)
 
         if bool(getattr(photo, "favorite", False)):
             add(build_system_album_title("Favorites", system_album_prefix), photo)

@@ -14,7 +14,7 @@ from .album_names import (
     legacy_system_album_title,
     legacy_user_album_title,
 )
-from .apple_photos import as_list, get_bool
+from .apple_photos import get_album_names, get_bool
 from .config import Config
 from .matching import match_assets
 from .state import RunState, load_state, save_state
@@ -227,13 +227,8 @@ def make_album_map(config: Config, logger: logging.Logger) -> int:
             "favorite": bool(getattr(photo, "favorite", False)),
         }
 
-        folder_albums = as_list(getattr(photo, "folder_album", None))
-        if not folder_albums:
-            folder_albums = as_list(getattr(photo, "albums", None))
-
-        for album in folder_albums:
-            if album and album != "_":
-                add(build_album_title(album), photo)
+        for album in get_album_names(photo):
+            add(build_album_title(album), photo)
 
         if bool(getattr(photo, "favorite", False)):
             add(build_system_album_title("Favorites", config.system_album_prefix), photo)

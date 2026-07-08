@@ -2,25 +2,28 @@ from __future__ import annotations
 
 import unittest
 
-from apple_photos_to_immich.apple_photos import as_list, get_bool
+from apple_photos_to_immich.apple_photos import get_album_names
 
 
-class PhotoHelperTests(unittest.TestCase):
-    def test_as_list(self) -> None:
-        self.assertEqual(as_list(None), [])
-        self.assertEqual(as_list("Album"), ["Album"])
-        self.assertEqual(as_list(["A", "", "B"]), ["A", "B"])
+class PhotoStub:
+    def __init__(self, *, folder_album=None, albums=None) -> None:
+        self.folder_album = folder_album
+        self.albums = albums
 
-    def test_get_bool_reads_property_or_method(self) -> None:
-        class Photo:
-            favorite = True
 
-            def is_movie(self) -> bool:
-                return False
+class ApplePhotosHelpersTests(unittest.TestCase):
+    def test_get_album_names_combines_folder_and_plain_album_memberships(self) -> None:
+        photo = PhotoStub(
+            folder_album=["Trips/Italy", "Family"],
+            albums=["Family", "Shared Summer", "_"],
+        )
 
-        photo = Photo()
-        self.assertTrue(get_bool(photo, "favorite"))
-        self.assertFalse(get_bool(photo, "is_movie"))
+        self.assertEqual(get_album_names(photo), ["Trips/Italy", "Family", "Shared Summer"])
+
+    def test_get_album_names_uses_plain_albums_when_folder_album_missing(self) -> None:
+        photo = PhotoStub(folder_album=None, albums=["Shared Album"])
+
+        self.assertEqual(get_album_names(photo), ["Shared Album"])
 
 
 if __name__ == "__main__":
